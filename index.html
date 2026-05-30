@@ -132,6 +132,12 @@
     background: linear-gradient(135deg, #7c3aed, #6d28d9);
     box-shadow: 0 4px 18px rgba(124,58,237,0.35);
   }
+  .bubble img {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    display: block;
+  }
   .typing { display: flex; align-items: center; gap: 5px; padding: 12px 14px; }
   .dot {
     width: 7px; height: 7px;
@@ -158,6 +164,37 @@
     flex-shrink: 0;
     z-index: 10;
   }
+  #imgPreviewWrap {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  #imgPreview {
+    width: 48px; height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  #imgPreviewName {
+    flex: 1;
+    font-size: 12px;
+    color: #a78bfa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #removeImg {
+    background: none;
+    border: none;
+    color: #f87171;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+  }
   .input-wrap {
     display: flex;
     gap: 9px;
@@ -183,6 +220,18 @@
     padding: 3px 0;
   }
   #input::placeholder { color: #4b3f7a; }
+  .action-btns { display: flex; gap: 6px; align-items: center; }
+  #imgBtn {
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: #a78bfa;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
   #sendBtn {
     width: 38px; height: 38px;
     border-radius: 11px;
@@ -197,12 +246,8 @@
     transition: opacity 0.2s;
   }
   #sendBtn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
-  .footer-note {
-    text-align: center;
-    color: #4b3f7a;
-    font-size: 11px;
-    margin-top: 7px;
-  }
+  .footer-note { text-align: center; color: #4b3f7a; font-size: 11px; margin-top: 7px; }
+  #fileInput { display: none; }
   @keyframes bounce {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-5px); }
@@ -215,7 +260,6 @@
 </head>
 <body>
 <div id="glow"></div>
-
 <header>
   <div class="logo-wrap">
     <div class="logo-icon">&#10022;</div>
@@ -226,12 +270,11 @@
   </div>
   <button id="clearBtn" onclick="clearChat()">&#128465; Tozalash</button>
 </header>
-
 <div id="messages">
   <div class="welcome" id="welcome">
     <div class="star">&#10022;</div>
     <h1>Ibknow ga xush kelibsiz</h1>
-    <p>Savolingizni yozing yoki tanlang</p>
+    <p>Savolingizni yozing yoki rasm yuboring</p>
     <div class="suggestions">
       <button class="sug-btn" onclick="useSuggestion(this)">Salom! O'zingni tanishtir</button>
       <button class="sug-btn" onclick="useSuggestion(this)">Dasturlashni qanday o'rganaman?</button>
@@ -240,30 +283,41 @@
     </div>
   </div>
 </div>
-
 <footer>
+  <div id="imgPreviewWrap">
+    <img id="imgPreview" src="" alt="preview">
+    <span id="imgPreviewName"></span>
+    <button id="removeImg" onclick="removeImage()">&#10005;</button>
+  </div>
   <div class="input-wrap">
     <textarea id="input" rows="1" placeholder="Xabar yozing..."></textarea>
-    <button id="sendBtn" onclick="sendMessage()">&#9658;</button>
+    <div class="action-btns">
+      <button id="imgBtn" onclick="document.getElementById('fileInput').click()">&#128247;</button>
+      <button id="sendBtn" onclick="sendMessage()">&#9658;</button>
+    </div>
   </div>
-  <div class="footer-note">Ibknow &middot; Anthropic Claude tomonidan quvvatlangan</div>
+  <div class="footer-note">Ibknow &middot; AI tomonidan quvvatlangan</div>
+  <input type="file" id="fileInput" accept="image/*" onchange="handleImage(event)">
 </footer>
-
 <script>
-const SYSTEM = "Siz Ibknow — foydali, do'stona va aqlli AI yordamchisiz. Foydalanuvchi bilan o'zbek tilida suhbatlashing. Qisqa, aniq va foydali javoblar bering. MUHIM: Agar foydalanuvchi 'Seni kim yaratdi?', 'Ibknowni kim yaratdi?', 'Dasturchi kim?', 'Yaratuvchi kim?' kabi savollar bersa, HAR DOIM quyidagicha javob ber: 'Meni Shorahimov Ibrohim yaratdi.' — boshqa hech narsa qo'shma.";
+const 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
+const SYSTEM = "Siz Ibknow — foydali, do'stona va aqlli AI yordamchisiz. Foydalanuvchi bilan o'zbek tilida suhbatlashing. Qisqa, aniq va foydali javoblar bering. MUHIM: Agar foydalanuvchi 'Seni kim yaratdi?', 'Ibknowni kim yaratdi?', 'Dasturchi kim?', 'Yaratuvchi kim?' kabi savollar bersa, HAR DOIM quyidagicha javob ber: 'Meni Shorahimov Ibrohim kashf qilgan.' boshqa hech narsa qoshma.";
 let history = [];
 let busy = false;
+let currentImageBase64 = null;
+let currentImageType = null;
 
 const inp = document.getElementById('input');
 const btn = document.getElementById('sendBtn');
 const msgs = document.getElementById('messages');
 const statusEl = document.getElementById('status');
 const clearBtn = document.getElementById('clearBtn');
+const imgPreviewWrap = document.getElementById('imgPreviewWrap');
 
 inp.addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 110) + 'px';
-  btn.disabled = !this.value.trim() || busy;
+  btn.disabled = (!this.value.trim() && !currentImageBase64) || busy;
 });
 
 inp.addEventListener('keydown', function(e) {
@@ -273,6 +327,30 @@ inp.addEventListener('keydown', function(e) {
   }
 });
 
+function handleImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const result = e.target.result;
+    currentImageBase64 = result.split(',')[1];
+    currentImageType = file.type;
+    document.getElementById('imgPreview').src = result;
+    document.getElementById('imgPreviewName').textContent = file.name;
+    imgPreviewWrap.style.display = 'flex';
+    btn.disabled = busy;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function removeImage() {
+  currentImageBase64 = null;
+  currentImageType = null;
+  imgPreviewWrap.style.display = 'none';
+  btn.disabled = !inp.value.trim() || busy;
+}
+
 function useSuggestion(el) {
   inp.value = el.textContent;
   inp.dispatchEvent(new Event('input'));
@@ -281,31 +359,34 @@ function useSuggestion(el) {
 
 function clearChat() {
   history = [];
+  currentImageBase64 = null;
+  currentImageType = null;
+  imgPreviewWrap.style.display = 'none';
   msgs.innerHTML = '';
   const w = document.createElement('div');
   w.className = 'welcome';
   w.id = 'welcome';
-  w.innerHTML = '<div class="star">&#10022;</div><h1>Ibknow ga xush kelibsiz</h1><p>Savolingizni yozing yoki tanlang</p><div class="suggestions"><button class="sug-btn" onclick="useSuggestion(this)">Salom! O\'zingni tanishtir</button><button class="sug-btn" onclick="useSuggestion(this)">Dasturlashni qanday o\'rganaman?</button><button class="sug-btn" onclick="useSuggestion(this)">Ingliz tilini o\'rganishga maslahat ber</button><button class="sug-btn" onclick="useSuggestion(this)">Menga qisqa hikoya yozing</button></div>';
+  w.innerHTML = '<div class="star">&#10022;</div><h1>Ibknow ga xush kelibsiz</h1><p>Savolingizni yozing yoki rasm yuboring</p><div class="suggestions"><button class="sug-btn" onclick="useSuggestion(this)">Salom! O\'zingni tanishtir</button><button class="sug-btn" onclick="useSuggestion(this)">Dasturlashni qanday o\'rganaman?</button><button class="sug-btn" onclick="useSuggestion(this)">Ingliz tilini o\'rganishga maslahat ber</button><button class="sug-btn" onclick="useSuggestion(this)">Menga qisqa hikoya yozing</button></div>';
   msgs.appendChild(w);
   clearBtn.style.display = 'none';
 }
 
-function addMsg(role, text) {
+function addMsg(role, text, imgSrc) {
   const welcome = document.getElementById('welcome');
   if (welcome) welcome.remove();
   clearBtn.style.display = 'block';
-
   const row = document.createElement('div');
   row.className = 'msg-row ' + (role === 'user' ? 'user' : 'bot');
-
   if (role === 'assistant') {
     row.innerHTML = '<div class="avatar bot">&#10022;</div><div class="bubble bot">' + text + '</div>';
   } else {
-    row.innerHTML = '<div class="bubble user">' + text + '</div><div class="avatar user">&#128100;</div>';
+    let content = '';
+    if (imgSrc) content += '<img src="' + imgSrc + '" alt="rasm">';
+    if (text) content += text;
+    row.innerHTML = '<div class="bubble user">' + content + '</div><div class="avatar user">&#128100;</div>';
   }
   msgs.appendChild(row);
   msgs.scrollTop = msgs.scrollHeight;
-  return row;
 }
 
 function showTyping() {
@@ -326,31 +407,40 @@ function removeTyping() {
 
 async function sendMessage() {
   const text = inp.value.trim();
-  if (!text || busy) return;
-
+  if ((!text && !currentImageBase64) || busy) return;
   busy = true;
   btn.disabled = true;
   inp.value = '';
   inp.style.height = 'auto';
   statusEl.textContent = 'Yozmoqda...';
 
-  history.push({ role: 'user', content: text });
-  addMsg('user', text);
+  const imgSrcPreview = currentImageBase64 ? 'data:' + currentImageType + ';base64,' + currentImageBase64 : null;
+
+  let userContent = text || 'Bu rasmni tahlil qil';
+  history.push({ role: 'user', content: userContent });
+  addMsg('user', text, imgSrcPreview);
+
+  currentImageBase64 = null;
+  currentImageType = null;
+  imgPreviewWrap.style.display = 'none';
   showTyping();
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const messages = [{ role: 'system', content: SYSTEM }, ...history];
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: SYSTEM,
-        messages: history
+        model: 'llama-3.3-70b-versatile',
+        messages: messages,
+        max_tokens: 1000
       })
     });
     const data = await res.json();
-    const reply = (data.content || []).map(c => c.text || '').join('') || 'Xatolik yuz berdi.';
+    const reply = data.choices?.[0]?.message?.content || 'Xatolik yuz berdi.';
     removeTyping();
     history.push({ role: 'assistant', content: reply });
     addMsg('assistant', reply);
@@ -371,5 +461,4 @@ async function sendMessage() {
 }
 </script>
 </body>
-      </html>
-      
+</html>
